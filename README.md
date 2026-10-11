@@ -247,17 +247,20 @@ launchctl unload ~/Library/LaunchAgents/com.boligvarsler.plist
 
 ---
 
-## Boligsiden i skyen (viktig)
+## Boligsiden + BoligPortal i skyen (viktig)
 
-Boligsidens API blokkerer **datacenter-IP-er** (bl.a. GitHub sine servere) med
-feilkode 403 – uansett hva vi gjør med forespørselen. Det betyr:
+Både **Boligsiden** og **BoligPortal** sitter bak Cloudflare, som blokkerer
+**datacenter-IP-er** (bl.a. GitHub sine servere) med feilkode 403 – uansett hva
+vi gjør med forespørselen. Det betyr:
 
-- **Lokalt på Mac-en din:** Boligsiden virker perfekt (vanlig bolig-IP).
-- **I GitHub Actions (skyen):** Boligsiden hopper pent over og henter 0 (den gir
-  *ikke* feilvarsler). Heimstaden og City Apartment virker som normalt.
+- **Lokalt på Mac-en din:** begge virker perfekt (vanlig bolig-IP).
+- **I GitHub Actions (skyen):** begge hopper pent over og henter 0 (de gir
+  *ikke* feilvarsler). **Lejebolig, Heimstaden og City Apartment virker som
+  normalt i skyen** – så du får fortsatt masse boliger uten noe ekstra.
 
-**Vil du også ha Boligsiden i skyen?** Legg til en gratis nøkkel fra Jina AI, så
-rutes Boligsiden-kallet gjennom deres relay (som har en ikke-blokkert IP):
+**Vil du også ha Boligsiden og BoligPortal i skyen?** Legg til én gratis nøkkel
+fra Jina AI, så rutes begge kallene gjennom deres relay (som har en
+ikke-blokkert IP). Den ene nøkkelen låser opp *begge* sidene:
 
 1. Gå til **https://jina.ai/reader** → logg inn (gratis, Google/e-post) → kopiér
    API-nøkkelen din (starter med `jina_...`).
@@ -265,10 +268,12 @@ rutes Boligsiden-kallet gjennom deres relay (som har en ikke-blokkert IP):
    secret**:
    - Navn: `JINA_API_KEY`
    - Verdi: nøkkelen din
-3. Ferdig. Neste kjøring tar Boligsiden med automatisk – ingen kodeendring.
+3. Ferdig. Neste kjøring tar Boligsiden + BoligPortal med automatisk – ingen
+   kodeendring.
 
-> Uten denne nøkkelen fungerer alt fint, du går bare glipp av Boligsiden-boliger
-> i de skybaserte kjøringene (du får dem fortsatt hvis du kjører lokalt).
+> Uten denne nøkkelen fungerer alt fint, du går bare glipp av Boligsiden- og
+> BoligPortal-boliger i de skybaserte kjøringene (du får dem fortsatt hvis du
+> kjører lokalt). BoligPortal er stor, så en Jina-nøkkel anbefales.
 
 ---
 

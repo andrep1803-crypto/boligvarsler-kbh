@@ -32,8 +32,11 @@ from __future__ import annotations
 
 import json as _json
 import logging
+import os
 import re
 from typing import Any, Optional
+
+import httpx
 
 from boligagent.models import Listing
 from .base import BaseScraper
@@ -42,6 +45,13 @@ from .parsing import clean_text, parse_rooms
 log = logging.getLogger("boligagent.scraper.boligportal")
 
 BASE = "https://www.boligportal.dk"
+
+# BoligPortal sidder bag Cloudflare, som blokkerer datacenter-IP-er (bl.a.
+# GitHub Actions) med 403 – akkurat som Boligsiden. Virker fint fra en vanlig
+# (bolig-)IP, så lokalt går det direkte. I skyen faller vi tilbake til et gratis
+# offentlig relay (r.jina.ai) som henter fra sin egen, ikke-blokkerte IP og gir
+# oss rå HTML tilbake (inkl. den innbygde SearchResultApp-JSON-en).
+JINA_PREFIX = "https://r.jina.ai/"
 # city_level_1=københavn dækker hele Storkøbenhavn inkl. Frederiksberg.
 LIST_URL = (
     BASE + "/lejeboliger/k%C3%B8benhavn/"
@@ -70,7 +80,18 @@ class BoligPortalScraper(BaseScraper):
         url: Optional[str] = LIST_URL
         pages = 0
         while url and pages < MAX_PAGES:
-            pp = self._fetch_page(url)
+            try:
+                pp = self._fetch_page(url)
+            except httpx.HTTPError as exc:
+                # Typisk 403 fra sky-IP uten relay-nøgle. Vi degraderer pænt:
+                # returnér det vi har (ofte 0) i stedet for at vælte scraperen,
+                # så runneren ikke sender gentagne "fejlede"-varsler.
+                log.warning(
+                    "[boligportal] kunne ikke hente side (%s). "
+                    "Virker lokalt; i skyen kræver det en gratis JINA_API_KEY – se README.",
+                    exc,
+                )
+                break
             if pp is None:
                 break
             results = pp.get("results") or []
@@ -91,7 +112,7 @@ class BoligPortalScraper(BaseScraper):
         return listings
 
     def _fetch_page(self, url: str) -> Optional[dict]:
-        html = self.get(url).text
+        html = self._get_html(url)
         m = _SCRIPT_RE.search(html)
         if not m:
             log.warning("[boligportal] fandt ikke SearchResultApp-JSON på %s", url)
@@ -101,6 +122,27 @@ class BoligPortalScraper(BaseScraper):
         except (ValueError, KeyError) as exc:
             log.warning("[boligportal] kunne ikke læse page_props: %s", exc)
             return None
+
+    def _get_html(self, url: str) -> str:
+        """Henter én side som rå HTML. Direkte først; ved 403 (sky-IP
+        blokeret) via relay, så den innbygde JSON-en overlever."""
+        try:
+            return self.get(url).text
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 403:
+                raise
+            log.warning("[boligportal] 403 direkte (sky-IP blokeret) – prøver relay via r.jina.ai")
+
+        relay_url = f"{JINA_PREFIX}{url}"
+        # X-Return-Format: html bevarer <script>-blokken (ellers får vi markdown).
+        relay_headers = {"X-Return-Format": "html", "x-no-cache": "true"}
+        jina_key = os.environ.get("JINA_API_KEY", "").strip()
+        if jina_key:
+            relay_headers["Authorization"] = f"Bearer {jina_key}"
+        self._throttle()
+        resp = self._client.get(relay_url, headers=relay_headers, timeout=60)
+        resp.raise_for_status()
+        return resp.text
 
     def _parse(self, raw: dict) -> Optional[Listing]:
         rel = raw.get("url")
