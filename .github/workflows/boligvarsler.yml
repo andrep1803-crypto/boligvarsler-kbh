@@ -1,0 +1,61 @@
+name: Boligvarsler
+
+# Kjører automatisk hvert 10. minutt, og kan også startes manuelt
+# fra fanen "Actions" (knappen "Run workflow").
+on:
+  schedule:
+    # Hvert 10. minutt. Tidspunktet er i UTC – minuttet kan skli litt
+    # (GitHub-cron er ikke helt presis ved stor last), men det gjør ikke noe.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+# Vi trenger skrivetilgang for å kunne committe data/seen.json tilbake.
+permissions:
+  contents: write
+
+# Hindrer at to kjøringer overlapper (f.eks. manuell + planlagt samtidig),
+# så seen.json ikke blir skrevet av to jobber på én gang.
+concurrency:
+  group: boligvarsler
+  cancel-in-progress: false
+
+jobs:
+  tjek-boliger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Hent koden
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Installer avhengigheter
+        run: pip install -r requirements.txt
+
+      - name: Kjør boligvarsleren
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          KONTAKT_NAVN: ${{ secrets.KONTAKT_NAVN }}
+          KONTAKT_TLF: ${{ secrets.KONTAKT_TLF }}
+          KONTAKT_ADRESSE: ${{ secrets.KONTAKT_ADRESSE }}
+          SOKNAD_TEKST: ${{ secrets.SOKNAD_TEKST }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+        run: python main.py
+
+      - name: Commit oppdatert "sett"-liste
+        run: |
+          git config user.name "boligvarsler-bot"
+          git config user.email "actions@github.com"
+          git add data/
+          # Commit bare hvis noe faktisk har endret seg.
+          if git diff --staged --quiet; then
+            echo "Ingen endringer i data/ – hopper over commit."
+          else
+            git commit -m "Oppdater sett-liste [skip ci]"
+            git push
+          fi

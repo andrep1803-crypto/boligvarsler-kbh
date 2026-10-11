@@ -1,0 +1,26 @@
+# Hemmeligheder – må ALDRIG committes
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# Playwright
+/playwright-browsers/
+
+# Lokale logs
+*.log
+
+# OS
+.DS_Store
+
+# Claude Code lokale innstillinger
+.claude/
+
+# Intern planleggingsdok med persondata – ikke i repoet
+boligagent_brief*.md

@@ -1,0 +1,11 @@
+Hej,
+
+Jeg er meget interesseret i jeres lejebolig og vil gerne høre, om det er
+muligt at komme til en fremvisning. Jeg har styr på økonomien og kan være
+fleksibel med indflytningsdato.
+
+Jeg håber at høre fra jer.
+
+Bedste hilsner,
+{KONTAKT_NAVN}
+Tlf: {KONTAKT_TLF}

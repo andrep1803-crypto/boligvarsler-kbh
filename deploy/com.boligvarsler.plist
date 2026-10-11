@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd-jobb for å kjøre boligvarsleren lokalt på Mac hver time.
+  Dette er et ALTERNATIV til GitHub Actions – bruk det hvis du heller vil
+  kjøre på egen maskin (da må maskinen være våken og på nett).
+
+  Installasjon (se README for full forklaring):
+    1. Rett STIENE under (to steder: ProgramArguments og WorkingDirectory)
+       slik at de peker på din faktiske prosjektmappe og venv-python.
+    2. Kopiér filen:
+         cp deploy/com.boligvarsler.plist ~/Library/LaunchAgents/
+    3. Last den inn:
+         launchctl load ~/Library/LaunchAgents/com.boligvarsler.plist
+    4. Test at den kjører nå med én gang:
+         launchctl start com.boligvarsler
+    5. Se loggen:
+         tail -f ~/Desktop/Boligagent/boligvarsler.log
+
+  Stoppe/avinstallere:
+    launchctl unload ~/Library/LaunchAgents/com.boligvarsler.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.boligvarsler</string>
+
+    <!-- Kommandoen som kjøres: venv-python + main.py -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/andy/Desktop/Boligagent/.venv/bin/python</string>
+        <string>/Users/andy/Desktop/Boligagent/main.py</string>
+    </array>
+
+    <!-- Arbeidsmappe – må være prosjektroten så config.yaml/.env finnes -->
+    <key>WorkingDirectory</key>
+    <string>/Users/andy/Desktop/Boligagent</string>
+
+    <!-- Kjør hvert 3600. sekund (1 time) -->
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <!-- Kjør også én gang med én gang jobben lastes inn -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Logg stdout/stderr til filer i prosjektmappen -->
+    <key>StandardOutPath</key>
+    <string>/Users/andy/Desktop/Boligagent/boligvarsler.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/andy/Desktop/Boligagent/boligvarsler.log</string>
+</dict>
+</plist>

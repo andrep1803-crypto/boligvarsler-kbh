@@ -1,0 +1,70 @@
+# ---------------------------------------------------------------------------
+# Boligvarsler – konfiguration
+# Alt her kan ændres uden at røre koden. Gem filen og kør igen.
+# ---------------------------------------------------------------------------
+
+kriterier:
+  min_m2: 50              # minimum størrelse i m²
+  min_vaerelser: 2        # minimum antal værelser
+  maks_husleje: 16000     # maks husleje i kr./md.
+
+  # Hvis en annonce oplyser aconto/forbrug separat:
+  #   true  = filtrér på husleje + aconto (anbefalet)
+  #   false = filtrér kun på husleje
+  medregn_aconto_i_filter: true
+
+# ---------------------------------------------------------------------------
+# Områder. En annonce godkendes hvis dens postnummer ligger i et af
+# intervallerne herunder. Mangler annoncen postnummer, bruges bydelsnavnene
+# under "navne" som reserve (tekstmatch i titel/adresse).
+# Startpunkt fra brief'et – juster frit.
+# ---------------------------------------------------------------------------
+omraader:
+  - navn: "København K (inkl. Christianshavn)"
+    postnr: [[1050, 1473]]
+    navne: ["København K", "Christianshavn", "Indre By", "1050", "1051"]
+  - navn: "Vesterbro (København V)"
+    postnr: [[1500, 1799]]
+    navne: ["Vesterbro", "København V"]
+  - navn: "Frederiksberg C"
+    postnr: [[1800, 1999]]
+    navne: ["Frederiksberg C"]
+  - navn: "Frederiksberg"
+    postnr: [[2000, 2000]]
+    navne: ["Frederiksberg"]
+  - navn: "Østerbro"
+    postnr: [[2100, 2100]]
+    navne: ["Østerbro", "København Ø"]
+  - navn: "Nørrebro"
+    postnr: [[2200, 2200]]
+    navne: ["Nørrebro", "København N"]
+
+# ---------------------------------------------------------------------------
+# Kørsel
+# ---------------------------------------------------------------------------
+intervall_minutter: 60   # kun til dokumentation/lokal launchd – i GitHub Actions
+                         # styres intervallet af cron i workflow-filen.
+
+# ---------------------------------------------------------------------------
+# Kilder – slå enkelte sider til/fra
+# ---------------------------------------------------------------------------
+kilder:
+  heimstaden: true
+  cej: true
+  cdc: true
+  cityapartment: true
+  boligsiden: true
+  findbolig: true
+  boligportal: true
+  lejebolig: true
+
+# ---------------------------------------------------------------------------
+# Skånsom hentning
+# ---------------------------------------------------------------------------
+hentning:
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+  forsinkelse_sekunder: 2    # pause mellem forespørgsler til samme side
+  timeout_sekunder: 30
+
+# Antal kørsler i træk en scraper må fejle før du får et Telegram-varsel.
+fejl_graense: 3
