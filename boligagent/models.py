@@ -31,6 +31,8 @@ class Listing:
     indflytning: Optional[str] = None    # fritekst, f.eks. "1. december 2026"
     billede_url: Optional[str] = None
     publiceret: Optional[str] = None     # fritekst/ISO hvis oplyst
+    moebleret: Optional[bool] = None     # True = møbleret, False = umøbleret,
+                                         # None = ukendt (siden oplyser det ikke)
 
     def __post_init__(self) -> None:
         if not self.id:

@@ -63,3 +63,24 @@ def clean_text(text: object) -> Optional[str]:
     if text is None or not isinstance(text, str):
         return None
     return re.sub(r"\s+", " ", text).strip() or None
+
+
+# "umøbleret"/"ikke møbleret"/"unfurnished" betyder IKKE møbleret – de må ikke
+# udløse møbel-filteret. Vi tjekker negationerne først.
+_UMOEBLERET_RE = re.compile(r"u-?m[øo]bl|ikke\s+m[øo]bl|uden\s+m[øo]bl|unfurnished", re.IGNORECASE)
+_MOEBLERET_RE = re.compile(r"m[øo]bl|furnish", re.IGNORECASE)
+
+
+def er_moebleret_tekst(*tekster: Optional[str]) -> bool:
+    """Gætter ud fra fritekst (titel/beskrivelse) om en bolig er møbleret.
+
+    Returnerer True kun hvis teksten nævner møblering OG ikke er en negation
+    som "umøbleret"/"ikke møbleret". Bruges som reserve for sider uden et
+    struktureret møbel-felt.
+    """
+    blob = " ".join(t for t in tekster if t)
+    if not blob:
+        return False
+    if _UMOEBLERET_RE.search(blob):
+        return False
+    return bool(_MOEBLERET_RE.search(blob))

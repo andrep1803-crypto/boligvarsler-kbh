@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from .models import Listing
+from scrapers.parsing import er_moebleret_tekst
 
 
 @dataclass
@@ -85,6 +86,14 @@ def passes_filters(listing: Listing, cfg: dict[str, Any], areas: list[Area]) -> 
         # Vi kunne placere annoncen, men den er udenfor ønskede områder.
         return FilterResult(False, None, "udenfor område")
     # Hvis vi slet ingen stedinfo har, lader vi den gå videre som "mangler data".
+
+    # --- Møbleret? Slå fra hvis brugeren ikke vil have møblerede boliger. ---
+    if k.get("ekskluder_moebleret", False):
+        # Struktureret flag (fx BoligPortal) har forrang; ellers læs af titlen.
+        if listing.moebleret is True or (
+            listing.moebleret is None and er_moebleret_tekst(listing.titel, listing.adresse)
+        ):
+            return FilterResult(False, area, "møbleret")
 
     # --- Numeriske kriterier. Manglende værdi => consider kravet opfyldt (vis med advarsel). ---
     if listing.m2 is not None and listing.m2 < min_m2:

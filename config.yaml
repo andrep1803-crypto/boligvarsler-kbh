@@ -13,6 +13,14 @@ kriterier:
   #   false = filtrér kun på husleje
   medregn_aconto_i_filter: true
 
+  # Møblerede boliger:
+  #   true  = spring møblerede/fremleje-boliger over (anbefalet ved fast bolig)
+  #   false = tag dem med
+  # Møblering læses fra sidens eget felt når det findes (fx BoligPortal),
+  # ellers fra ord som "møbleret"/"furnished" i titlen. "umøbleret"/"ikke
+  # møbleret" tæller korrekt som IKKE møbleret.
+  ekskluder_moebleret: true
+
 # ---------------------------------------------------------------------------
 # Områder. En annonce godkendes hvis dens postnummer ligger i et af
 # intervallerne herunder. Mangler annoncen postnummer, bruges bydelsnavnene

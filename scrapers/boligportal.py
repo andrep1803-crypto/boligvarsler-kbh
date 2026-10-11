@@ -40,7 +40,7 @@ import httpx
 
 from boligagent.models import Listing
 from .base import BaseScraper
-from .parsing import clean_text, parse_rooms
+from .parsing import clean_text, er_moebleret_tekst, parse_rooms
 
 log = logging.getLogger("boligagent.scraper.boligportal")
 
@@ -176,6 +176,12 @@ class BoligPortalScraper(BaseScraper):
         bp_id = raw.get("id")
         listing_id = f"boligportal-{bp_id}" if bp_id else ""
 
+        # BoligPortal har et struktureret møbel-flag under features.furnished.
+        feats = raw.get("features") or {}
+        moebleret = feats.get("furnished")
+        if moebleret is None:  # reserve: læs det af titlen
+            moebleret = er_moebleret_tekst(title) or None
+
         return Listing(
             kilde=self.source,
             url=url,
@@ -191,6 +197,7 @@ class BoligPortalScraper(BaseScraper):
             indflytning=clean_text(raw.get("available_from")),
             billede_url=billede,
             publiceret=clean_text(raw.get("advertised_date")),
+            moebleret=moebleret,
         )
 
 
