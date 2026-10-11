@@ -93,7 +93,6 @@ def load_soknad(secrets: Secrets, path: Path = SOKNAD_PATH) -> str:
 class Notifier:
     def __init__(self, telegram: Telegram, secrets: Secrets):
         self.tg = telegram
-        self.soknad = load_soknad(secrets)
 
     def notify_listing(self, listing: Listing, area: Optional[str]) -> None:
         caption = format_listing(listing, area)
@@ -101,8 +100,7 @@ class Notifier:
             self.tg.send_photo(listing.billede_url, caption)
         else:
             self.tg.send_message(caption)
-        # Søknadstekst i egen besked, klar til at kopiere.
-        self.tg.send_message(self.soknad, disable_preview=True)
+        # (Søknadsteksten sendes IKKE længere – du får kun selve boligannoncen.)
 
     def notify_summary(self, total: int, per_kilde: dict[str, int]) -> None:
         lines = [f"✅ <b>Boligvarsler er sat op.</b>",
