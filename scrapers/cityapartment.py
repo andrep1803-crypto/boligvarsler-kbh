@@ -103,7 +103,7 @@ class CityApartmentScraper(BaseScraper):
             adresse=addr,
             postnr=postnr,
             m2=_num(btx, r"(\d+)\s*m²"),
-            vaerelser=_vaerelser(btx),
+            vaerelser=_vaerelser(btx, body),
             husleje=_husleje(btx, body),
             aconto=_num(btx, r"(?:Aconto|Forbrug|A/C\w*)\s*([\d.]+)")
             or _num(body, r"Heating\s*([\d.]+)\s*DKK"),
@@ -173,19 +173,21 @@ def _husleje(btx: str, body: str) -> Optional[int]:
     return max(mds)
 
 
-def _vaerelser(text: str) -> Optional[int]:
+def _vaerelser(btx: str, body: str = "") -> Optional[int]:
     """Antal værelser på dansk (stue + soveværelser).
 
     City Apartments "N Rooms"-felt tæller kun opholdsstuer, så en 2-værelses
     står som "1 Rooms". Den rigtige værelsestælling står som "N-room apartment"
-    (= Rooms + Bedrooms). Vi foretrækker den; ellers summerer vi Rooms+Bedrooms;
-    ellers falder vi tilbage til Rooms alene.
+    (= Rooms + Bedrooms) – typisk som noget af det første i beskrivelsen. Vi
+    foretrækker den (både i specs-blokken og i den fulde beskrivelse); ellers
+    summerer vi Rooms+Bedrooms; ellers falder vi tilbage til Rooms alene.
     """
-    m = re.search(r"(\d+)\s*-\s*room apartment", text, re.IGNORECASE)
-    if m:
-        return int(m.group(1))
-    rooms = _num(text, r"(\d+)\s*Rooms")
-    bedrooms = _num(text, r"(\d+)\s*Bedrooms")
+    for src in (btx, body):
+        m = re.search(r"(\d+)\s*-\s*room apartment", src, re.IGNORECASE)
+        if m:
+            return int(m.group(1))
+    rooms = _num(btx, r"(\d+)\s*Rooms")
+    bedrooms = _num(btx, r"(\d+)\s*Bedrooms")
     if rooms is not None and bedrooms is not None:
         return rooms + bedrooms
     return rooms

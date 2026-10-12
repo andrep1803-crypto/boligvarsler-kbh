@@ -58,11 +58,11 @@ intervall_minutter: 60   # kun til dokumentation/lokal launchd – i GitHub Acti
 # ---------------------------------------------------------------------------
 kilder:
   heimstaden: true
-  cej: true
-  cdc: true
+  cej: false          # SPA bag aktiv bot-beskyttelse (429/WAF) – ikke muligt at hente
+  cdc: false          # domæne aldrig bekræftet (forveksles med EDC) – stub
   cityapartment: true
   boligsiden: true
-  findbolig: true
+  findbolig: false    # defekt SSL + ASP.NET – gav 0
   boligportal: false
   lejebolig: false
 
