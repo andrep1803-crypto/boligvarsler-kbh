@@ -63,8 +63,8 @@ kilder:
   cityapartment: true
   boligsiden: true
   findbolig: true
-  boligportal: true
-  lejebolig: true
+  boligportal: false
+  lejebolig: false
 
 # ---------------------------------------------------------------------------
 # Skånsom hentning
