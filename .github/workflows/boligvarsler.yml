@@ -1,11 +1,18 @@
 name: Boligvarsler
 
-# Kjører automatisk hvert 10. minutt, og kan også startes manuelt
-# fra fanen "Actions" (knappen "Run workflow").
+# VIKTIG om timing:
+# GitHub sin gratis `schedule`-cron er upålitelig for korte intervaller – en
+# "*/10"-cron blir i praksis forsinket/slått sammen til flere timers mellomrom.
+# Derfor LOOPER hver kjøring internt: den sjekker boligene hvert ~10. minutt i
+# ~5,5 time (under GitHubs 6-timers-grense pr. jobb). Når jobben slutter, starter
+# GitHub-køen straks neste kjøring (schedulen under holder alltid én "pending"
+# klar pga. concurrency), så dekningen blir sammenhengende ~10-min – gratis, da
+# offentlige repo har ubegrenset kjøretid. Kan også startes manuelt under
+# "Actions" -> "Run workflow".
 on:
   schedule:
-    # Hvert 10. minutt. Tidspunktet er i UTC – minuttet kan skli litt
-    # (GitHub-cron er ikke helt presis ved stor last), men det gjør ikke noe.
+    # Prøver ofte, kun for å holde en ny kjøring klar i køen til den aktive
+    # loopen slutter. De fleste av disse blir slått sammen/avlyst av køen.
     - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
@@ -13,8 +20,9 @@ on:
 permissions:
   contents: write
 
-# Hindrer at to kjøringer overlapper (f.eks. manuell + planlagt samtidig),
-# så seen.json ikke blir skrevet av to jobber på én gang.
+# Kun én kjøring av gangen. cancel-in-progress: false => en ny (planlagt)
+# kjøring legger seg i kø og starter FØRST når den aktive loopen er ferdig.
+# Det er dette som kjeder kjøringene sammen uten avbrudd.
 concurrency:
   group: boligvarsler
   cancel-in-progress: false
@@ -22,7 +30,8 @@ concurrency:
 jobs:
   tjek-boliger:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Litt under GitHubs harde 6-timers-grense. Selve loopen stopper på 5,5 t.
+    timeout-minutes: 355
     steps:
       - name: Hent koden
         uses: actions/checkout@v4
@@ -36,7 +45,7 @@ jobs:
       - name: Installer avhengigheter
         run: pip install -r requirements.txt
 
-      - name: Kjør boligvarsleren
+      - name: Kjør boligvarsleren i loop (hvert ~10. min i 5,5 t)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -45,17 +54,34 @@ jobs:
           KONTAKT_ADRESSE: ${{ secrets.KONTAKT_ADRESSE }}
           SOKNAD_TEKST: ${{ secrets.SOKNAD_TEKST }}
           JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
-        run: python main.py
-
-      - name: Commit oppdatert "sett"-liste
         run: |
           git config user.name "boligvarsler-bot"
           git config user.email "actions@github.com"
-          git add data/
-          # Commit bare hvis noe faktisk har endret seg.
-          if git diff --staged --quiet; then
-            echo "Ingen endringer i data/ – hopper over commit."
-          else
-            git commit -m "Oppdater sett-liste [skip ci]"
-            git push
-          fi
+
+          # Stopp loopen etter 5,5 time (19800 s), så jobben rekker å avslutte
+          # pent innenfor timeout og køen kan starte neste kjøring.
+          STOP=$((SECONDS + 19800))
+          runde=0
+          while [ "$SECONDS" -lt "$STOP" ]; do
+            runde=$((runde + 1))
+            echo "::group::Runde $runde ($(date -u +%H:%M:%SZ))"
+            # Én dårlig runde skal ikke velte hele loopen.
+            python main.py || echo "main.py feilet i denne runden – fortsetter."
+
+            # Lagre "sett"-lista tilbake hver runde, så en ny bolig ikke varsles
+            # på nytt når køen starter neste kjøring.
+            git add data/
+            if git diff --staged --quiet; then
+              echo "Ingen endringer i data/."
+            else
+              git commit -m "Oppdater sett-liste [skip ci]"
+              # Remote kan ha fått en kode-commit i mellomtiden – rebase først.
+              git pull --rebase --autostash origin main || true
+              git push || echo "git push feilet – prøver igjen neste runde."
+            fi
+            echo "::endgroup::"
+
+            # Vent ~10 min før neste sjekk (ikke hvis vi er nær stopp-tid).
+            [ "$SECONDS" -lt "$STOP" ] && sleep 600
+          done
+          echo "Loop ferdig etter $runde runder – køen starter neste kjøring."
